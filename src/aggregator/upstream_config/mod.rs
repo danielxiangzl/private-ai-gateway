@@ -93,6 +93,9 @@ pub struct UpstreamConfig {
     pub chutes_e2ee_discovery_rounds: Option<u64>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub chutes_e2ee_discovery_interval_seconds: Option<u64>,
+    /// Sigstore source repo (`owner/name`) for the Tinfoil verifier. Tinfoil only.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub tinfoil_repo: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, PartialEq, Eq)]
@@ -135,6 +138,8 @@ pub struct PublicUpstreamConfig {
     pub chutes_e2ee_discovery_rounds: Option<u64>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub chutes_e2ee_discovery_interval_seconds: Option<u64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub tinfoil_repo: Option<String>,
 }
 
 impl UpstreamConfig {
@@ -162,6 +167,7 @@ impl UpstreamConfig {
             chutes_chute_ids: self.chutes_chute_ids.clone(),
             chutes_e2ee_discovery_rounds: self.chutes_e2ee_discovery_rounds,
             chutes_e2ee_discovery_interval_seconds: self.chutes_e2ee_discovery_interval_seconds,
+            tinfoil_repo: self.tinfoil_repo.clone(),
         }
     }
 }

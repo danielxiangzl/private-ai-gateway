@@ -105,6 +105,17 @@ fn looks_like_uuid(value: &str) -> bool {
         && value.chars().all(|c| c == '-' || c.is_ascii_hexdigit())
 }
 
+/// `owner/name`: exactly one `/`, both parts non-empty, ASCII alphanumeric or `-`, `_`, `.`.
+fn valid_tinfoil_repo(value: &str) -> bool {
+    let valid_part = |part: &str| {
+        !part.is_empty()
+            && part
+                .chars()
+                .all(|c| c.is_ascii_alphanumeric() || matches!(c, '-' | '_' | '.'))
+    };
+    matches!(value.split_once('/'), Some((owner, name)) if valid_part(owner) && valid_part(name))
+}
+
 fn valid_secret_ai_origin(value: &str) -> bool {
     let Ok(origin) = reqwest::Url::parse(value) else {
         return false;
@@ -289,6 +300,26 @@ pub(super) fn validate_config(config: &[UpstreamConfig]) -> Result<(), UpstreamC
                 "upstream {:?} has Chutes E2EE fields but provider is not chutes",
                 upstream.name
             )));
+        }
+        if let Some(repo) = upstream.tinfoil_repo.as_ref() {
+            if repo.trim().is_empty() {
+                return Err(UpstreamConfigError::InvalidConfig(format!(
+                    "upstream {:?} tinfoil_repo must not be empty",
+                    upstream.name
+                )));
+            }
+            if upstream.provider != UpstreamProvider::Tinfoil {
+                return Err(UpstreamConfigError::InvalidConfig(format!(
+                    "upstream {:?} has tinfoil_repo but provider is not tinfoil",
+                    upstream.name
+                )));
+            }
+            if !valid_tinfoil_repo(repo) {
+                return Err(UpstreamConfigError::InvalidConfig(format!(
+                    "upstream {:?} tinfoil_repo must be of the form owner/name",
+                    upstream.name
+                )));
+            }
         }
         if upstream.provider == UpstreamProvider::Privatemode && upstream.bearer_token.is_some() {
             return Err(UpstreamConfigError::InvalidConfig(format!(

@@ -39,6 +39,7 @@ fn test_upstream_config(
         chutes_chute_ids: None,
         chutes_e2ee_discovery_rounds: None,
         chutes_e2ee_discovery_interval_seconds: None,
+        tinfoil_repo: None,
     }
 }
 
@@ -130,6 +131,54 @@ fn parse_secret_ai_rejects_invalid_origins() {
         assert!(
             err.to_string().contains("requires a root HTTPS base_url"),
             "{base_url:?}: {err}"
+        );
+    }
+}
+
+#[test]
+fn parse_tinfoil_accepts_a_valid_repo() {
+    let config = parse_config_text(
+        r#"[{
+          "name": "tinfoil",
+          "provider": "tinfoil",
+          "base_url": "https://inference.tinfoil.sh",
+          "models": {"public-model": "upstream-model"},
+          "tinfoil_repo": "tinfoilsh/confidential-model-router.v2_x"
+        }]"#,
+    )
+    .expect("a well-formed tinfoil_repo should be accepted for tinfoil");
+    assert_eq!(
+        config[0].tinfoil_repo.as_deref(),
+        Some("tinfoilsh/confidential-model-router.v2_x")
+    );
+    assert_eq!(
+        config[0].redacted().tinfoil_repo.as_deref(),
+        Some("tinfoilsh/confidential-model-router.v2_x")
+    );
+}
+
+#[test]
+fn parse_tinfoil_repo_rejects_bad_values_and_other_providers() {
+    let parse = |provider: &str, repo: &str| {
+        parse_config_text(&format!(
+            r#"[{{
+              "name": "up",
+              "provider": "{provider}",
+              "base_url": "https://up.example",
+              "models": {{"public-model": "upstream-model"}},
+              "tinfoil_repo": "{repo}"
+            }}]"#
+        ))
+    };
+    let err = parse("near-ai", "tinfoilsh/router").expect_err("non-tinfoil must reject");
+    assert!(err.to_string().contains("provider is not tinfoil"), "{err}");
+    let err = parse("tinfoil", "  ").expect_err("blank repo must be rejected");
+    assert!(err.to_string().contains("must not be empty"), "{err}");
+    for repo in ["tinfoilsh", "/router", "tinfoilsh/", "a/b/c", "owner/na me"] {
+        let err = parse("tinfoil", repo).expect_err("malformed repo must be rejected");
+        assert!(
+            err.to_string().contains("form owner/name"),
+            "{repo:?}: {err}"
         );
     }
 }

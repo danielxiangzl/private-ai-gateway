@@ -272,6 +272,7 @@ request time.
 | `chutes_chute_ids` | object | unset | Map of provider model ID to chute UUID. Keys must appear in `models` values. Chutes only. |
 | `chutes_e2ee_discovery_rounds` | integer from 1 to 10 | `3` | Evidence discovery attempts per verification. Chutes only. |
 | `chutes_e2ee_discovery_interval_seconds` | non-negative integer | `0` | Delay between discovery rounds. Chutes only. |
+| `tinfoil_repo` | string `owner/name` | `tinfoilsh/confidential-model-router` | Sigstore source repo the Tinfoil verifier checks the enclave against. Tinfoil only. |
 
 See [Cache and background refresh](upstream-verification-lifecycle.md#cache-and-background-refresh)
 for scheduling, failure retries, concurrency, and cache-warmth limits.

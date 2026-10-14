@@ -170,6 +170,12 @@ impl TinfoilProviderVerifier {
         }
     }
 
+    /// Sigstore source repo (`owner/name`) passed to the verifier as `tinfoil_repo`.
+    pub fn with_repo(mut self, repo: impl Into<String>) -> Self {
+        self.verifier = self.verifier.with_option("tinfoil_repo", repo);
+        self
+    }
+
     #[cfg(test)]
     pub(super) fn with_command(
         command: Vec<String>,

@@ -262,10 +262,14 @@ pub(super) fn build_verifier(
                 }
                 Arc::new(verifier)
             }
-            UpstreamProvider::Tinfoil => Arc::new(TinfoilProviderVerifier::new_with_cache(
-                request_timeout_seconds,
-                cache_seconds,
-            )),
+            UpstreamProvider::Tinfoil => {
+                let mut verifier =
+                    TinfoilProviderVerifier::new_with_cache(request_timeout_seconds, cache_seconds);
+                if let Some(repo) = &cfg.tinfoil_repo {
+                    verifier = verifier.with_repo(repo.clone());
+                }
+                Arc::new(verifier)
+            }
             UpstreamProvider::NearAi => {
                 let mut verifier =
                     NearAiProviderVerifier::new_with_cache(request_timeout_seconds, cache_seconds);
