@@ -142,5 +142,38 @@ cargo build --release --locked --bin private-ai-gateway
 BIN="$CARGO_TARGET_DIR/release/private-ai-gateway"
 [[ -x $BIN ]] || die "release binary not found at $BIN after build"
 
+# Provider verifiers (tinfoil, phala, ...) run as `uv run python
+# scripts/private_ai_provider_verifier.py` from this checkout. The launcher
+# image ships neither uv nor python, so install a pinned uv release (checked
+# against its sha256) and sync the locked Python environment before exec.
+# The exported UV_* variables are inherited by the verifier subprocesses.
+UV_VERSION=0.13.1
+UV_SHA256=eadd9d27c134ab5ac1ffd4473b97a741407f3ea238288f03121fc4deddf90220
+UV_DIR="$PRIVATE_AI_GATEWAY_CACHE_DIR/uv-$UV_VERSION"
+export UV_CACHE_DIR=${UV_CACHE_DIR:-$PRIVATE_AI_GATEWAY_CACHE_DIR/uv-cache}
+export UV_PYTHON_INSTALL_DIR=${UV_PYTHON_INSTALL_DIR:-$PRIVATE_AI_GATEWAY_CACHE_DIR/uv-python}
+# Pin the interpreter to one with prebuilt wheels for every locked package, so
+# sync does not compile C extensions (cffi, ckzg, ...) from source.
+export UV_PYTHON=${UV_PYTHON:-3.13}
+export UV_PROJECT_ENVIRONMENT=${UV_PROJECT_ENVIRONMENT:-$PRIVATE_AI_GATEWAY_CACHE_DIR/venv}
+if [[ ! -x $UV_DIR/uv ]]; then
+  if ! command -v curl >/dev/null 2>&1; then
+    require_tool apt-get
+    apt-get update -qq
+    apt-get install -y --no-install-recommends ca-certificates curl
+  fi
+  uv_tgz=$(mktemp)
+  curl -fsSL -o "$uv_tgz" \
+    "https://github.com/astral-sh/uv/releases/download/$UV_VERSION/uv-x86_64-unknown-linux-gnu.tar.gz"
+  echo "$UV_SHA256  $uv_tgz" | sha256sum -c - >/dev/null || die "uv tarball sha256 mismatch"
+  mkdir -p "$UV_DIR"
+  tar -xzf "$uv_tgz" -C "$UV_DIR" --strip-components=1
+  rm -f "$uv_tgz"
+fi
+export PATH="$UV_DIR:$PATH"
+log "uv: $(uv --version)"
+log "uv sync --locked"
+uv sync --locked
+
 log "exec $BIN"
 exec "$BIN"
